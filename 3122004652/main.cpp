@@ -1,11 +1,12 @@
 #include "EquationGenerate.h"
 #include "Calculate.h"
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]){
+
 	if (argc != 3 && argc != 5) {
-		cout << "ÊäÈë´íÎó£¬³ÌĞò½áÊø" << endl;
+		cout << "è¾“å…¥é”™è¯¯ï¼Œç¨‹åºç»“æŸ" << endl;
 		return -1;
 	}
-	bool opt[4] = { 0 };//·Ö±ğ¼ì²âÊÇ·ñÓĞ-n,-r,-e,-a
+	bool opt[4] = { 0 };//åˆ†åˆ«æ£€æµ‹æ˜¯å¦æœ‰-n,-r,-e,-a
 	for (int i = 1; i < argc; i += 2)
 	{
 		if (strcmp(argv[i], "-n") == 0)
@@ -20,27 +21,37 @@ int main(int argc, char* argv[]) {
 	if (opt[0]) {
 		countLimit = strtol(argv[2], NULL, 0);
 		if (countLimit <= 0) {
-			cout << "ÒªÇóÉú³ÉÌâÄ¿ÊıÁ¿´íÎó£¬³ÌĞò½áÊø" << endl;
+			cout << "è¦æ±‚ç”Ÿæˆé¢˜ç›®æ•°é‡é”™è¯¯ï¼Œç¨‹åºç»“æŸ" << endl;
 			return 1;
 		}
 		if (opt[1]) {
 			numLimit = strtol(argv[4], NULL, 0);
 			if (numLimit <= 0) {
-				cout << "ÒªÇóÉú³ÉÊı¾İ·¶Î§´íÎó£¬³ÌĞò½áÊø" << endl;
+				cout << "è¦æ±‚ç”Ÿæˆæ•°æ®èŒƒå›´é”™è¯¯ï¼Œç¨‹åºç»“æŸ" << endl;
 				return 2;
 			}
 		}
 		else
-			numLimit = 10;//Ä¬ÈÏÎª10
-		//srand(time(NULL));//Ëæ»úÊıÉú³É
-		srand(100);
+			numLimit = 10;//é»˜è®¤ä¸º10
+		srand(time(NULL));//éšæœºæ•°ç”Ÿæˆ
 		ofstream fileExample("Exercises.txt");
 		ofstream fileAnswer("Answers.txt");
-		int count = 1;
-		unordered_set<string> vis;//¼ÇÂ¼ÖØ¸´ËãÊ½
+		int count = 1,timelimit = 1;
+		unordered_set<string> vis;//è®°å½•é‡å¤ç®—å¼
 		while (count <= countLimit) {
 			Node ans = getRandomEquation(vis);
-			if (ans.checkeq == "") continue;
+			if (ans.checkeq == "") {
+				timelimit++;
+				if (timelimit >= 500)
+				{
+					fileExample.close();
+					fileAnswer.close();
+					cout << "éšæœºç”Ÿæˆæ—¶è¿ç»­å‡ºç°500æ¬¡é‡å¤ç®—å¼ï¼Œå½“å‰æ•°å­—é™åˆ¶å¯èƒ½ä¸è¶³ä»¥ç”Ÿæˆè¿™ä¹ˆå¤šä¸é‡å¤çš„ç®—å¼" << endl;
+					return 5;
+				}
+				continue;
+			}
+			timelimit = 0;
 			fileExample << count << ".  " << ans.eq << "=" << endl;
 			fileAnswer << count << ".  " << ans.fr.write() << endl;
 			count++;
@@ -48,7 +59,7 @@ int main(int argc, char* argv[]) {
 		vis.clear();
 		fileExample.close();
 		fileAnswer.close();
-		cout << "ËãÊ½Éú³É³É¹¦" << endl;
+		cout << "ç®—å¼ç”ŸæˆæˆåŠŸ" << endl;
 	}
 	else if (opt[2] && opt[3])
 	{
@@ -57,21 +68,25 @@ int main(int argc, char* argv[]) {
 		ifstream fileExample(argv[2]);
 		ifstream fileAnswer(argv[4]);
 		if (fileExample.fail() || fileAnswer.fail()) {
-			cout << "ÎÄ¼şÂ·¾¶´íÎó" << endl;
+			cout << "æ–‡ä»¶è·¯å¾„é”™è¯¯" << endl;
 			return 3;
 		}
 		try {
 			checkexample(fileExample, fileAnswer);
-			cout << "´ğ°¸±È½ÏÍê³É" << endl;
+			cout << "ç­”æ¡ˆæ¯”è¾ƒå®Œæˆ" << endl;
 		}
-		catch (const char* msg) { // ²¶»ñÆäËû±ê×¼Òì³£
+		catch (const char* msg) { // æ•è·å¼‚å¸¸
 			cout << msg << endl;
+			fileExample.close();
+			fileAnswer.close();
+			return 6;
 		}
 		fileExample.close();
 		fileAnswer.close();
 	}
-	else {
-		cout << "ÊäÈë²Ù×÷·û²»ÕıÈ·£¬³ÌĞò½áÊø" << endl;
+	else{
+		cout << "è¾“å…¥æ“ä½œç¬¦ä¸æ­£ç¡®ï¼Œç¨‹åºç»“æŸ" << endl;
+		return 7;
 	}
 	return 0;
 }
