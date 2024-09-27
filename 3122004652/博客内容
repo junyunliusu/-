@@ -1,1 +1,249 @@
+|    这个作业属于哪个课程  |   [班级的链接](https://edu.cnblogs.com/campus/gdgy/CSGrade22-12)   |   
+| ----------------- |--------------- |  
+| 这个作业要求在哪里| [作业要求的链接](https://edu.cnblogs.com/campus/gdgy/CSGrade22-12/homework/13221) | 
+|  这个作业的目标| 组队合作实现一个自动生成小学四则运算题目的命令行程序     |  
 
+**一、结对组合成员介绍**
+|  结对成员姓名    |   学号   |   GitHub项目地址   |
+| ---- | ---- | ---- |
+|   梁志聪   |   3122004650   |   [项目地址](https://github.com/wei-177/SE-Project2)   |
+|   李永杰   |   3122004652   |   [项目地址](https://github.com/junyunliusu/RJ-project2)   |
+
+**二、PSP表**
+|   PSP2.1   |   Personal Software Process Stages   |   预估耗时（分钟） |  实际耗时（分钟） |
+| ---- | ---- | ---- | ---- |
+|   Planning   |   计划   |   30   |   30   |
+|   ·Estimate|    ·估计这个任务需要多少时间|   30   |   30   |
+|   Development   |   开发   |   660   |   660   |
+|   ·Analysis|   ·需求分析 (包括学习新技术)   |   180   |   60   |
+|   · Design Spec|   · 生成设计文档   |   30   |   30   |
+|   · Design Review|   · 设计复审   |   30   |   30   |
+|   · Coding Standard|   · 代码规范 (为目前的开发制定合适的规范)   |   30   |   30   |
+|   · Design   |   · 具体设计   |   120   |   60   |
+|   · Coding   |   · 具体编码|   120   |   180   |
+|   · Code Review   |   · 代码复审   |   30   |   180   |
+|   · Test   |  · 测试（自我测试，修改代码，提交修改）   |   30   |   90   |
+|   Reporting   |   报告   |   90   |   130   |
+|   · Test Repor   |   · 测试报告   |   30   |   60   |
+|   · Size Measurement   |  · 计算工作量   |   30   |   10   |
+|   · Postmortem & Process Improvement Plan   |· 事后总结, 并提出过程改进计划 |30|60 |
+||合计|   780   |910|
+
+**三、效能分析**
+针对附加要求9，采取后缀表达式方法进行运算，避免括号在计算中的影响。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926212840055-880524263.png)
+1是刚进main；
+2是刚到算式生成；
+3是生成了100条算式；
+4是生成10000条算式；
+5是vis.clear()后；
+6是return 0之后；
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926212845111-2057353068.png)
+由上图可知，getRandomEquation消耗最大。
+通过代码进行的性能优化极其不明显，因为算式太短了，算式调到6000以上生成1000个算式的情况下才有300多ms的优化，如果只是作业要求的数据几乎没有区别，不过改成release版本就可以快10倍左右，也没必要优化了
+
+**四、设计实现过程**
+程序设计一个Fraction类，类函数有13个，其余函数7个，以及主函数1个。
+类函数多数为重载函数，便于后续对该类变量进行调整和操作，其中非重载类函数有reduction()，random_init()，write()。
+其余函数7个，分别为：stringToFraction(string s)，autoCal(Fraction x, string op, Fraction y)， getPriority(string x)；
+getRandomOperator()，getRandomEquation()，calculate(string eq)，checkexample(ifstream& fileExample, ifstream& fileAnswer)。
+Fraction类作为基础操作变量，实际存储两个长整型整数。
+函数中，getRandomOperator()为getRandomEquation()中的一种操作，函数autoCal和函数getPriority辅助getRandomEquation()的实现。
+其中有两个函数较为关键，特此给出其流程图如下：
+getRandomEquation()流程图如下：
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926212321394-675936212.png)
+因为calculate函数与checkexample函数关系极为密切，因此将两者并入同一流程图如下：
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926212332957-1667490555.png)
+**五、代码说明**
+getRandomEquation()代码如下：
+```
+Node getRandomEquation() {
+	int siz = (rand() % operatorLimit + 1) * 2 + 1;
+	vector <Node> List(siz);//用vector实现将链缩成点的过程
+	vector <int> priority;//优先级
+	List[0].fr.random_init(); List[0].checkeq = List[0].eq = List[0].fr.write();
+	List[0].l = -1, List[0].r = 1; List[0].bracketadd = 0;
+	for (int i = 1; i < siz; i += 2) {//节点数据初始化,使链呈现数字与运算符交替的结构(即是一条合法的无括号四则运算算式)
+		List[i].l = i - 1; List[i].r = i + 1;
+		List[i].op = getRandomOperator();
+		List[i].checkeq = List[i].eq = List[i].op;
+		List[i].bracketadd = false;
+		priority.push_back(i);
+		List[i + 1].l = i; List[i + 1].r = i + 2;
+		List[i + 1].fr.random_init();
+		List[i + 1].checkeq = List[i + 1].eq = List[i + 1].fr.write();
+		List[i + 1].bracketadd = false;
+	}
+
+	random_shuffle(priority.begin(), priority.end());//随机排序以获得运算符的运算优先级
+	for (auto id : priority)
+	{
+		/*
+		该合并过程可以看作将链根据节点优先级缩成一个点
+		初始每个节点对应分别一条合法的无括号四则运算算式的数字和运算符
+		按优先级逐级操作链上的运算符节点，每次对一个运算符节点操作时，
+		首先根据两个相邻数字节点的数据更新当前运算符节点从而得到新的数字节点，并根据运算符优先级判断是否添加括号。
+		然后将两个相邻的数字节点从链中删除（该操作通过修改下标实现懒删除)
+		此时可以看作链上的一个运算符节点和其相邻的数字节点合并成了新的数字节点。
+		重复上述操作，将链上的所有节点合并完成，最终剩下的节点包含的四则运算式即是目标算式。
+		查重字符串则是数字节点在合并中按字典序较小来进行合并且始终添加括号的结果(可确保有限次交换相同的字符串其查重字符串一样）
+		*/
+		int lid = List[id].l, rid = List[id].r;//获取进行运算元素的下标
+		string lop = List[lid].l == -1 ? "#" : List[List[lid].l].op;//获取该运算符左边的运算符
+		string rop = List[rid].r == siz ? "#" : List[List[rid].r].op;//获取该运算符右边的运算符
+		List[id].fr = autoCal(List[lid].fr, List[id].op, List[rid].fr);
+		if (List[id].fr < 0) {//合并节点值小于0，交换合并顺序并更新括号
+			if ((List[lid].op == "-" || List[lid].op == "+") && List[lid].bracketadd == false) {
+				List[lid].eq = '(' + List[lid].eq + ')';
+				List[lid].bracketadd = true;
+			}
+			if ((List[rid].op == "-" || List[rid].op == "+") && List[rid].bracketadd == true) {
+				List[rid].eq = List[rid].eq.substr(1, (int)List[rid].eq.size() - 2);
+				List[rid].bracketadd = false;
+			}
+			List[lid].swapkey(List[rid]);//交换节点的关键值
+			List[id].fr = autoCal(List[lid].fr, List[id].op, List[rid].fr);
+			if (List[id].fr.error_check())//算式运算过程发生除0错误
+				return { Fraction(),"","","",0,0 };
+		}
+
+		if (getPriority(lop) < getPriority(List[id].op) && getPriority(List[id].op) >= getPriority(rop))//根据优先级判断是否添加括号
+			List[id].eq = List[lid].eq + List[id].eq + List[rid].eq;
+		else
+		{
+			if (getPriority(lop) >= getPriority(List[lid].op) && getPriority(List[lid].op) >= getPriority(List[id].op) && List[lid].bracketadd == true) {
+				List[lid].eq = List[lid].eq.substr(1, (int)List[lid].eq.size() - 2);//移除不需要的括号
+				List[lid].bracketadd = false;
+			}
+			List[id].eq = '(' + List[lid].eq + List[id].eq + List[rid].eq + ')';
+			List[id].bracketadd = true;
+		}
+
+		if ((List[id].op == "+" || List[id].op == "*") && List[lid].checkeq > List[rid].checkeq)//check全程加括号才能保证查重正确性
+			List[id].checkeq = '(' + List[rid].checkeq + List[id].checkeq + List[lid].checkeq + ')';
+		else
+			List[id].checkeq = '(' + List[lid].checkeq + List[id].checkeq + List[rid].checkeq + ')';
+
+		List[id].r = List[rid].r;
+		List[id].l = List[lid].l;
+		if (List[id].l != -1)  List[List[id].l].r = id;
+		if (List[id].r != siz) List[List[id].r].l = id;
+	}
+	Node ans = List[priority.back()];
+	if (vis.find(ans.checkeq) != vis.end())
+		return { Fraction(),"","","",0,0 };
+	vis.insert(ans.checkeq);
+	return ans;
+}
+```
+关于代码中注释的解释图如下：
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926212517385-1941862759.png)
+代码总体思路如下：
+先将结构体Node的容器初始化，通过Node中的l，r数组来确保数据不被重复使用。
+以操作符为结点进行运算，当取左右运算数据结合后，将当前操作符视作新的数据，以便下一个操作符运算。
+check全程加括号，将式子最复杂化，但是却避免在查重时应对括号扰乱优先级的可能，用空间换取时间。
+
+calculate函数代码如下：
+```
+string calculate(string eq) {
+    stack<string> opt;
+    queue<pair<string, Fraction>> postOrder;
+    size_t last = 0;
+    for (size_t i = 0; i < eq.size(); i++) { //求后缀表达式
+        if (eq[i] == '=') {//算式存在等于号，加载最后一个数字
+            if (last != i)
+                postOrder.push({ "",Fraction(stringToFraction(eq.substr(last,i - last))) });
+            last = i + 1;
+            continue;
+        }
+        else if (eq[i] == '+' || eq[i] == '-' || eq[i] == '*') {
+            if (last != i)
+                postOrder.push({ "",Fraction(stringToFraction(eq.substr(last,i - last))) });
+            last = i + 1;
+            while (!(opt.empty() || getPriority(eq.substr(i, 1)) > getPriority(opt.top()))) {
+                postOrder.push({ opt.top(),Fraction() });
+                opt.pop();
+            }
+            opt.push(eq.substr(i, 1));
+        }
+        else if (eq.substr(i, 2) == "÷") {
+            if (last != i)
+                postOrder.push({ "",Fraction(stringToFraction(eq.substr(last,i - last))) });
+            last = i + 2;
+            while (!(opt.empty() || getPriority(eq.substr(i, 2)) > getPriority(opt.top()))) {
+                postOrder.push({ opt.top(),Fraction() });
+                opt.pop();
+            }
+            opt.push(eq.substr(i, 2));
+        }
+        else if (eq[i] == '(') {
+            opt.push(eq.substr(i, 1));
+            last++;
+        }
+        else if (eq[i] == ')') {
+            if (last != i)
+                postOrder.push({ "",Fraction(stringToFraction(eq.substr(last,i - last))) });
+            last = i + 1;
+            while (!opt.empty() && opt.top() != "(") {
+                postOrder.push({ opt.top(),Fraction() });
+                opt.pop();
+            }
+            if (!opt.empty()) opt.pop();
+        }
+    }
+    if (last < eq.size())//算式不存在等于号时，加载最后一个数字
+        postOrder.push({ "",Fraction(stringToFraction(eq.substr(last))) });
+    while (!opt.empty()) {
+        postOrder.push({ opt.top(),Fraction() });
+        opt.pop();
+    }
+    stack<Fraction> st;
+    while (!postOrder.empty())
+    {
+        if (postOrder.front().first != "") {
+            Fraction fra1 = st.top();
+            if (!st.empty()) st.pop();
+            Fraction fra2 = st.top();
+            if (!st.empty()) st.pop();
+            st.push(autoCal(fra2, postOrder.front().first, fra1));
+        }
+        else {
+            st.push(postOrder.front().second);
+        }
+        postOrder.pop();
+    }
+    if (st.empty())
+        throw out_of_range("Index out of range");
+    return st.top().write();
+}
+```
+以运算符为结点将数据和运算符读取出来，并通过栈与队列的组合操作，采用后缀表达式的思路进行操作，当式子读取完毕后，进行运算求出字符串运算后的结果。
+
+**六、测试运行**
+测试样例如下：
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926205637921-1562933875.png)
+该样例测试程序在参数为5时是否正确运行并返回正常。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926205956220-211118302.png)
+该样例测试程序在参数为3时是否正确运行并返回正常。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210048483-1914126829.png)
+该样例测试程序测试生成数量为负时，是否能处理报错。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210245119-63766673.png)
+该样例测试程序测试当文件路径不正确时的返回。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210253632-2071401657.png)
+该样例测试程序测试当输入参数不正确时能否正确处理。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210333301-1302779002.png)
+该样例测试程序测试能否正常进入附加功能。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210358082-2010500743.png)
+该样例测试程序测试函数getPriority能否正确返回运算符优先级。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210438192-33261982.png)
+该样例测试程序测试calculate函数能否正确运算。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210523606-1729111043.png)
+该样例测试程序测试autoCal函数能否进行正确四则运算。
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210615757-607384416.png)
+该样例测试程序测试stringToFraction函数能否正确将字符串转化为需要的fraction类。
+所有测试程序结果如下：
+![](https://img2024.cnblogs.com/blog/3512991/202409/3512991-20240926210739249-1807516583.png)
+
+**七、项目小结**
+梁志聪结对感受：
+李永杰结对感受：此次结对项目，主导者为梁志聪同学，他包揽了几乎大部分的代码，我负责博客等有关文本的编写，可以说我花费的时间是不足以与梁志聪同学相比的，他在此次结对项目中多次精益求精，从完成基本需求，到考虑更多特殊情况，最后完善附加需求，这些都是由他所推动。
